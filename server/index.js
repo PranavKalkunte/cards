@@ -6,49 +6,14 @@ import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-const PORT         = process.env.PORT         || 3001
-const PASS         = process.env.OWNER_PASS   || 'change-this-to-your-passphrase'
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN || ''
-const GITHUB_REPO  = 'PranavKalkunte/cards'
-const GITHUB_PATH  = 'server/data.json'
+const PORT = process.env.PORT       || 3001
+const PASS = process.env.OWNER_PASS || 'change-this-to-your-passphrase'
 
 const DATA_FILE = path.join(__dirname, 'data.json')
 let data = JSON.parse(readFileSync(DATA_FILE, 'utf8'))
 
-// ── Persistence ───────────────────────────────────────────────────────────
-let persistTimer = null
-
 function persist() {
-  const json = JSON.stringify(data, null, 2)
-  writeFileSync(DATA_FILE, json)
-
-  if (!GITHUB_TOKEN) return
-
-  clearTimeout(persistTimer)
-  persistTimer = setTimeout(() => commitToGitHub(json), 2000)
-}
-
-async function commitToGitHub(json) {
-  try {
-    const base = `https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_PATH}`
-    const headers = {
-      Authorization: `Bearer ${GITHUB_TOKEN}`,
-      'Content-Type': 'application/json',
-      'User-Agent': 'cards-app',
-    }
-    const { sha } = await fetch(base, { headers }).then(r => r.json())
-    await fetch(base, {
-      method: 'PUT',
-      headers,
-      body: JSON.stringify({
-        message: 'update data',
-        content: Buffer.from(json).toString('base64'),
-        sha,
-      }),
-    })
-  } catch (e) {
-    console.error('GitHub sync failed:', e.message)
-  }
+  writeFileSync(DATA_FILE, JSON.stringify(data, null, 2))
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────
