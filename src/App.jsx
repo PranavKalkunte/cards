@@ -166,6 +166,7 @@ export default function App() {
   function handleTabChange(tab) {
     setActiveTab(tab)
     if (tab !== 'briefs') setActiveBriefId(null)
+    window.scrollTo(0, 0)
   }
 
   if (loading) return null

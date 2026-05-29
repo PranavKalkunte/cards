@@ -26,6 +26,15 @@ function textToWords(text) {
   return (text.match(/\S+\s*|\s+/g) || []).map(t => ({ text: t, type: 'context' }))
 }
 
+function mergeWords(oldWords, newText) {
+  const tokens = newText.match(/\S+\s*|\s+/g) || []
+  return tokens.map((token, i) => {
+    const old = oldWords[i]
+    if (old && old.text === token) return old
+    return { text: token, type: 'context' }
+  })
+}
+
 function wordsToRaw(words) { return words.map(w => w.text).join('') }
 
 function TagInput({ tagIds, allTags, onChange }) {
@@ -172,7 +181,6 @@ export default function CardEditor({ card, folders, tags, onClose, onSave, onDel
 
   const [words,      setWords]      = useState(() => card ? segmentsToWords(card.segments) : [])
   const [rawText,    setRawText]    = useState(() => card ? wordsToRaw(segmentsToWords(card.segments)) : '')
-  const [showCanvas, setShowCanvas] = useState(!!(card?.segments?.length))
   const [paintMode,  setPaintMode]  = useState('highlight')
   const [fullCanvas, setFullCanvas] = useState(false)
 
@@ -222,11 +230,10 @@ export default function CardEditor({ card, folders, tags, onClose, onSave, onDel
     tick(n => n + 1)
   }
 
-  function handleTextBlur() {
-    if (rawText.trim() && !showCanvas) {
-      setWords(textToWords(rawText))
-      setShowCanvas(true)
-    }
+  function handleTextChange(e) {
+    const text = e.target.value
+    setRawText(text)
+    setWords(prev => text.trim() ? mergeWords(prev, text) : [])
   }
 
   function handleSave() {
@@ -312,18 +319,17 @@ export default function CardEditor({ card, folders, tags, onClose, onSave, onDel
             />
           </div>
 
-          {!showCanvas ? (
-            <div className="editor-field">
-              <div className="editor-label">Text</div>
-              <textarea
-                className="editor-input editor-textarea"
-                value={rawText}
-                onChange={e => setRawText(e.target.value)}
-                onBlur={handleTextBlur}
-                rows={8}
-              />
-            </div>
-          ) : (
+          <div className="editor-field">
+            <div className="editor-label">Text</div>
+            <textarea
+              className="editor-input editor-textarea"
+              value={rawText}
+              onChange={handleTextChange}
+              rows={5}
+            />
+          </div>
+
+          {words.length > 0 && (
             <div>
               <div className="editor-modes">
                 {MODES.map(m => (
@@ -337,9 +343,6 @@ export default function CardEditor({ card, folders, tags, onClose, onSave, onDel
                 ))}
                 <span className="editor-mode-spacer" />
                 <button className="editor-mode-btn" onClick={() => setFullCanvas(true)}>expand</button>
-                <button className="editor-mode-btn" onClick={() => { setRawText(wordsToRaw(words)); setShowCanvas(false) }}>
-                  edit text
-                </button>
               </div>
               <CanvasWords
                 words={words} paintMode={paintMode}
