@@ -1,0 +1,25 @@
+{
+  "name": "cards",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "dev:server": "fuser -k 3001/tcp 2>/dev/null; node --watch --env-file=.env server/index.js",
+    "dev:all": "concurrently -n vite,server -c cyan,yellow \"npm run dev\" \"npm run dev:server\"",
+    "start": "NODE_ENV=production node --env-file=.env server/index.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.0.0",
+    "express": "^4.21.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "concurrently": "^9.0.0",
+    "vite": "^5.4.1"
+  }
+}
