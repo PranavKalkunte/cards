@@ -54,6 +54,10 @@ html, body { height: 100%; }
   --accent-line:   rgba(91, 106, 139, 0.30);
   --accent-strong: rgba(91, 106, 139, 0.55);
 
+  /* Amber — reading path underlines */
+  --amber-line:   rgba(180, 115, 20, 0.45);
+  --amber-strong: rgba(180, 115, 20, 0.80);
+
   /* Dot grid — swappable for dark mode */
   --dot: radial-gradient(rgba(0, 0, 0, 0.055) 1px, transparent 1px);
   --dot-size: 20px;
@@ -78,11 +82,22 @@ html, body { height: 100%; }
   --accent-dim:    rgba(139, 160, 196, 0.12);
   --accent-line:   rgba(139, 160, 196, 0.35);
   --accent-strong: rgba(139, 160, 196, 0.60);
+  --amber-line:   rgba(212, 155, 60, 0.55);
+  --amber-strong: rgba(212, 155, 60, 0.85);
   --dot: radial-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px);
   --shadow-modal: 0 2px 40px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.2);
 }
 
 /* ─── Base ───────────────────────────────────────────── */
+
+body::after {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+  opacity: 0.028;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+}
+.dark body::after { opacity: 0.045; }
 
 body {
   font-family: var(--sans);
@@ -178,7 +193,7 @@ a { color: inherit; text-decoration: none; }
 
 /* ─── Cuts feed ──────────────────────────────────────── */
 
-.cuts { padding: var(--s-5) var(--s-8) var(--s-16); }
+.cuts { padding: var(--s-5) var(--s-8) var(--s-16); max-width: 680px; margin: 0 auto; }
 .cuts-inner { max-width: 760px; margin: 0 auto; }
 
 @keyframes cardRise {
@@ -201,15 +216,15 @@ a { color: inherit; text-decoration: none; }
 .cut-card:hover .cut-card-inner { opacity: 0.78; }
 
 .cut-tagline {
-  font-family: var(--serif); font-size: var(--t-20); font-weight: 500;
+  font-family: var(--serif); font-size: var(--t-20); font-weight: 400;
   line-height: 1.3; color: var(--ink); margin-bottom: var(--s-2);
-  letter-spacing: -0.012em; transition: color 0.14s ease;
+  letter-spacing: -0.008em; transition: color 0.14s ease;
 }
 .cut-card:hover .cut-tagline { color: var(--accent); }
 
 .cut-meta {
-  font-family: var(--sans); font-size: var(--t-10); font-weight: 400;
-  letter-spacing: 0.07em; text-transform: uppercase;
+  font-family: var(--sans); font-size: var(--t-10); font-weight: 500;
+  letter-spacing: 0.09em; font-variant-caps: all-small-caps;
   margin-bottom: var(--s-4);
   display: flex; align-items: center; justify-content: space-between;
   font-variant-numeric: tabular-nums;
@@ -230,7 +245,7 @@ a { color: inherit; text-decoration: none; }
 .word-highlight {
   color: var(--ink);
   text-decoration: underline;
-  text-decoration-color: var(--accent-line);
+  text-decoration-color: var(--amber-line);
   text-decoration-thickness: 2px;
   text-underline-offset: 4px;
 }
@@ -242,10 +257,16 @@ a { color: inherit; text-decoration: none; }
 .word-both {
   color: var(--ink); font-weight: 700;
   text-decoration: underline;
-  text-decoration-color: var(--accent-strong);
+  text-decoration-color: var(--amber-strong);
   text-decoration-thickness: 2px;
   text-underline-offset: 4px;
 }
+
+@keyframes underlineDraw {
+  from { text-decoration-color: transparent; }
+}
+.modal .word-highlight { animation: underlineDraw 0.55s ease 0.25s both; }
+.modal .word-both      { animation: underlineDraw 0.55s ease 0.25s both; }
 
 /* Condensed feed view */
 .word-feed-power {
@@ -293,17 +314,22 @@ a { color: inherit; text-decoration: none; }
 
 .brief-sq {
   aspect-ratio: 1;
-  background: var(--lift);
+  background-color: var(--lift);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0, transparent 27px,
+    var(--ghost) 27px, var(--ghost) 28px
+  );
   padding: var(--s-5);
   cursor: pointer;
   display: flex; flex-direction: column; justify-content: center; align-items: center;
   text-align: center;
   position: relative; overflow: hidden;
-  transition: background 0.14s ease;
+  transition: background-color 0.14s ease;
   animation: briefIn 0.25s ease forwards;
   opacity: 0;
 }
-.brief-sq:hover { background: var(--ghost); }
+.brief-sq:hover { background-color: var(--ghost); }
 
 .brief-sq-count {
   position: absolute; top: var(--s-4); right: var(--s-4);
@@ -497,6 +523,11 @@ a { color: inherit; text-decoration: none; }
   font-variant-numeric: tabular-nums;
 }
 
+.tree-children {
+  margin-left: 21px;
+  border-left: 1px solid var(--ghost);
+}
+
 /* Tree rows */
 .tree-row {
   display: flex; align-items: center;
@@ -566,14 +597,15 @@ a { color: inherit; text-decoration: none; }
 }
 .folder-card:last-child::after { display: none; }
 .folder-card-tagline {
-  font-family: var(--serif); font-size: var(--t-16); font-weight: 500;
+  font-family: var(--serif); font-size: var(--t-18); font-weight: 400;
   line-height: 1.3; color: var(--ink); margin-bottom: var(--s-1);
   transition: color 0.14s ease;
 }
 .folder-card:hover .folder-card-tagline { color: var(--accent); }
 .folder-card-meta {
-  font-size: var(--t-10); color: var(--faint); letter-spacing: 0.07em;
-  text-transform: uppercase; margin-bottom: var(--s-2);
+  font-size: var(--t-10); color: var(--faint); letter-spacing: 0.09em;
+  font-variant-caps: all-small-caps; font-weight: 500;
+  margin-bottom: var(--s-2);
   font-family: var(--sans); font-variant-numeric: tabular-nums;
 }
 
@@ -616,7 +648,8 @@ a { color: inherit; text-decoration: none; }
 
 .modal-author {
   font-family: var(--sans); font-size: var(--t-10); color: var(--faint);
-  letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: var(--s-2);
+  letter-spacing: 0.09em; font-variant-caps: all-small-caps; font-weight: 500;
+  margin-bottom: var(--s-2);
   display: flex; align-items: center; gap: var(--s-2);
   font-variant-numeric: tabular-nums;
 }

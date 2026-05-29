@@ -122,7 +122,7 @@ function FolderNode({
       </div>
 
       {isExpanded && (
-        <div>
+        <div className="tree-children">
           {subFolders.map(sub => (
             <FolderNode
               key={sub.id}
