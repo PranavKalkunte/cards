@@ -32,12 +32,16 @@ function mergeWords(oldWords, newText) {
 }
 
 function getCaretPos(el) {
-  const sel = window.getSelection()
-  if (!sel || !sel.rangeCount) return null
-  const range = sel.getRangeAt(0).cloneRange()
-  range.selectNodeContents(el)
-  range.setEnd(sel.getRangeAt(0).endContainer, sel.getRangeAt(0).endOffset)
-  return range.toString().length
+  try {
+    const sel = window.getSelection()
+    if (!sel || !sel.rangeCount) return null
+    const range = sel.getRangeAt(0).cloneRange()
+    range.selectNodeContents(el)
+    range.setEnd(sel.getRangeAt(0).endContainer, sel.getRangeAt(0).endOffset)
+    return range.toString().length
+  } catch {
+    return null
+  }
 }
 
 function setCaretPos(el, pos) {
@@ -179,7 +183,13 @@ function UnifiedCanvas({ words, paintMode, isDragging, dragStart, dragEnd, onWor
   const savedCaret = useRef(null)
 
   useLayoutEffect(() => {
-    if (savedCaret.current !== null && ref.current) {
+    if (!ref.current) return
+    // Remove browser-inserted nodes React doesn't track: phantom <br>, stray
+    // text nodes, and empty spans Chrome leaves behind after full deletion.
+    for (const node of [...ref.current.childNodes]) {
+      if (node.nodeName !== 'SPAN' || !node.textContent) ref.current.removeChild(node)
+    }
+    if (savedCaret.current !== null) {
       if (ref.current.contains(document.activeElement) || ref.current === document.activeElement) {
         setCaretPos(ref.current, savedCaret.current)
       }
