@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import TextRenderer from './TextRenderer'
-import { getCardFolderPath, getCardFolderId } from '../utils'
+import { getCardFolderPath, getCardFolderId, formatDate } from '../utils'
 import { useOwner } from '../OwnerContext'
 
 export default function CardModal({ card, folders, tags, onClose, onEdit, onNavigateToFolder, onTogglePin }) {
@@ -23,61 +23,74 @@ export default function CardModal({ card, folders, tags, onClose, onEdit, onNavi
       <div className="modal" onClick={e => e.stopPropagation()}>
         <button className="modal-dismiss" onClick={onClose}>×</button>
 
-        {path && (
-          <div
-            className="modal-path"
-            onClick={() => folderId && onNavigateToFolder(folderId)}
-            title="Open in files"
-          >
-            {path.join(' / ')} ↗
-          </div>
-        )}
-
-        <div className="modal-author">
-          {card.author}&ensp;{card.year}
-          {card.pinned && <span style={{ color: 'var(--accent)', marginLeft: 6 }}>●</span>}
-        </div>
-
-        <div className="modal-source">
-          {card.sourceUrl ? (
-            <a
-              className="modal-source-link"
-              href={card.sourceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={e => e.stopPropagation()}
+        {/* Left: meta info */}
+        <div className="modal-left">
+          {path && (
+            <div
+              className="modal-path"
+              onClick={() => folderId && onNavigateToFolder(folderId)}
+              title="Open in files"
             >
-              {card.source}
-              <em className="source-icon">↗</em>
-            </a>
-          ) : (
-            card.source
+              {path.join(' / ')} ↗
+            </div>
+          )}
+
+          <div className="modal-author">
+            {card.author}
+            {card.pinned && <span style={{ color: 'var(--accent)', fontSize: 10 }}>●</span>}
+          </div>
+
+          {card.year && <div className="modal-year">{card.year}</div>}
+
+          {(card.source || card.sourceUrl) && (
+            <div className="modal-source">
+              {card.sourceUrl ? (
+                <a
+                  className="modal-source-link"
+                  href={card.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={e => e.stopPropagation()}
+                >
+                  {card.source}
+                  <em className="source-icon">↗</em>
+                </a>
+              ) : (
+                card.source
+              )}
+            </div>
+          )}
+
+          {card.createdAt && (
+            <div className="modal-created">{formatDate(card.createdAt)}</div>
+          )}
+
+          {cardTags.length > 0 && (
+            <div className="tag-row">
+              {cardTags.map(tag => (
+                <span key={tag.id} className="tag-pill">{tag.name}</span>
+              ))}
+            </div>
+          )}
+
+          {isOwner && (
+            <div className="modal-actions">
+              <button className="modal-action-btn" onClick={onEdit}>edit</button>
+              <button
+                className={`modal-action-btn${card.pinned ? ' modal-action-pin' : ''}`}
+                onClick={e => { e.stopPropagation(); onTogglePin() }}
+              >
+                {card.pinned ? 'unpin' : 'pin'}
+              </button>
+            </div>
           )}
         </div>
 
-        <div className="modal-tagline">{card.tagline}</div>
-
-        {cardTags.length > 0 && (
-          <div className="tag-row">
-            {cardTags.map(tag => (
-              <span key={tag.id} className="tag-pill">{tag.name}</span>
-            ))}
-          </div>
-        )}
-
-        <TextRenderer segments={card.segments} />
-
-        {isOwner && (
-          <div className="modal-actions">
-            <button className="modal-action-btn" onClick={onEdit}>edit</button>
-            <button
-              className={`modal-action-btn${card.pinned ? ' modal-action-pin' : ''}`}
-              onClick={e => { e.stopPropagation(); onTogglePin() }}
-            >
-              {card.pinned ? 'unpin' : 'pin'}
-            </button>
-          </div>
-        )}
+        {/* Right: content */}
+        <div className="modal-right">
+          <div className="modal-tagline">{card.tagline}</div>
+          <TextRenderer segments={card.segments} />
+        </div>
       </div>
     </div>
   )

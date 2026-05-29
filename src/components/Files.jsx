@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import FolderTree from './FolderTree'
 import { getFolderById } from '../utils'
+import { useOwner } from '../OwnerContext'
 
 const UNFILED = '__unfiled__'
 
@@ -40,6 +42,8 @@ export default function Files({
   onCardClick, onAddFolder,
   onRenameFolder, onDeleteFolder, onMoveCard,
 }) {
+  const [createTrigger, setCreateTrigger] = useState(null)
+  const isOwner = useOwner()
   const isUnfiled = selectedFolderId === UNFILED
   const selectedFolder = (!isUnfiled && selectedFolderId) ? getFolderById(folders, selectedFolderId) : null
   const folderCards = isUnfiled
@@ -47,18 +51,29 @@ export default function Files({
     : selectedFolder
       ? selectedFolder.children.filter(c => typeof c === 'string').map(id => cards[id]).filter(Boolean)
       : []
-  const breadcrumb = isUnfiled ? ['unfiled'] : selectedFolderId ? getFolderBreadcrumb(folders, selectedFolderId) : null
+  const breadcrumb = isUnfiled ? ['Inbox'] : selectedFolderId ? getFolderBreadcrumb(folders, selectedFolderId) : null
+  const inboxCount = getUnfiledCards(folders, cards).length
 
   return (
     <div className="files" data-panel={selectedFolderId ? 'content' : 'tree'}>
       <div className="files-tree">
+        {/* Inbox — special top item */}
         <div
-          className={`tree-row${isUnfiled ? ' selected' : ''}`}
-          style={{ paddingLeft: 14 }}
+          className={`tree-inbox-row${isUnfiled ? ' selected' : ''}`}
           onClick={() => onSelectFolder(UNFILED)}
         >
-          <span className="tree-chevron" style={{ visibility: 'hidden' }}>›</span>
-          <span className="tree-name">unfiled</span>
+          <span className="tree-inbox-name">Inbox</span>
+          {inboxCount > 0 && <span className="tree-inbox-count">{inboxCount}</span>}
+          {isOwner && (
+            <button
+              className="tree-inbox-add"
+              onClick={e => {
+                e.stopPropagation()
+                const folderId = (selectedFolderId && selectedFolderId !== UNFILED) ? selectedFolderId : null
+                setCreateTrigger({ folderId, ts: Date.now() })
+              }}
+            >+</button>
+          )}
         </div>
         <FolderTree
           folders={folders}
@@ -68,6 +83,7 @@ export default function Files({
           onRenameFolder={onRenameFolder}
           onDeleteFolder={onDeleteFolder}
           onMoveCard={onMoveCard}
+          triggerCreate={createTrigger}
         />
       </div>
 
@@ -77,9 +93,6 @@ export default function Files({
             <button className="files-mobile-back" onClick={() => onSelectFolder(null)}>
               ‹ folders
             </button>
-            {breadcrumb && (
-              <div className="files-breadcrumb">{breadcrumb.join(' / ')}</div>
-            )}
             {folderCards.map(card => {
               const bold = buildBold(card.segments || [])
               return (
@@ -90,10 +103,10 @@ export default function Files({
                   onDragStart={e => e.dataTransfer.setData('cardId', card.id)}
                   onClick={() => onCardClick(card.id)}
                 >
+                  <div className="folder-card-meta">{[card.author, card.year].filter(Boolean).join(' · ')}</div>
                   <div className="folder-card-tagline">{card.tagline}</div>
-                  <div className="folder-card-meta">{card.author}&ensp;{card.year}</div>
                   {bold.length > 0 && (
-                    <p className="card-text" style={{ fontSize: 16 }}>
+                    <p className="card-text" style={{ fontSize: 15, marginTop: 8 }}>
                       {bold.map((t, i) => <span key={i}>{t.text}</span>)}
                     </p>
                   )}

@@ -92,14 +92,20 @@ export default function Briefs({
             style={{ animationDelay: `${i * 0.06}s` }}
             onClick={() => onSelectBrief(brief.id)}
           >
-            <span className="brief-sq-count">{brief.cardIds.length}</span>
-            <div className="brief-sq-name">{brief.name}</div>
-            {brief.description && (
-              <div className="brief-sq-desc">{brief.description}</div>
-            )}
+            <div className="brief-sq-top">
+              <span className="brief-sq-count">{brief.cardIds.length}</span>
+            </div>
+            <div className="brief-sq-bottom">
+              <div className="brief-sq-name">{brief.name}</div>
+              {brief.description && (
+                <div className="brief-sq-desc">{brief.description}</div>
+              )}
+            </div>
           </div>
         ))}
-        {isOwner && <div className="brief-sq-new" onClick={() => setShowNewBrief(true)}>+</div>}
+        {isOwner && (
+          <div className="brief-sq-new" onClick={() => setShowNewBrief(true)}>+</div>
+        )}
       </div>
 
       {showNewBrief && (

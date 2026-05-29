@@ -11,24 +11,24 @@ function buildCondensed(segments) {
 
 export default function CutCard({ card, index, onClick }) {
   const condensed = buildCondensed(card.segments)
+  const source = [card.author, card.year].filter(Boolean).join(' · ')
 
   return (
     <article
-      className="cut-card"
+      className={`cut-card${card.pinned ? ' pinned' : ''}`}
       style={{ animationDelay: `${index * 0.055}s` }}
       onClick={onClick}
     >
       <div className="cut-card-inner">
-        <div className="cut-tagline">{card.tagline}</div>
-        <div className="cut-meta">
-          <span className="cut-meta-left">
-            {card.pinned && <span className="cut-pin">●&ensp;</span>}
-            {card.author}&ensp;{card.year}
+        <div className="cut-head">
+          <span className="cut-head-source">
+            {source}
           </span>
           {card.createdAt && (
-            <span className="cut-date">{formatDate(card.createdAt)}</span>
+            <span className="cut-head-date">{formatDate(card.createdAt)}</span>
           )}
         </div>
+        <div className="cut-tagline">{card.tagline}</div>
         {condensed.length > 0 && (
           <p className="card-text">
             {condensed.map((t, i) => (

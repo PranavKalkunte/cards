@@ -92,7 +92,7 @@ function FolderPicker({ folders, selectedId, onChange }) {
     <div className="folder-picker-wrap" ref={ref}>
       <div className="folder-picker-trigger" onClick={() => setOpen(o => !o)}>
         <span className="folder-picker-trigger-label">
-          {selected ? selected.label : 'none'}
+          {selected ? selected.label : 'Inbox'}
         </span>
         <span className="folder-picker-trigger-chevron">{open ? '▾' : '›'}</span>
       </div>
@@ -102,7 +102,7 @@ function FolderPicker({ folders, selectedId, onChange }) {
             className={`folder-picker-item folder-picker-none${!selectedId ? ' active' : ''}`}
             onClick={() => { onChange(null); setOpen(false) }}
           >
-            none
+            Inbox
           </div>
           {options.map(opt => (
             <div
@@ -243,115 +243,137 @@ export default function CardEditor({ card, folders, tags, onClose, onSave, onDel
       <div className="editor" onClick={e => e.stopPropagation()}>
         <button className="modal-dismiss" onClick={onClose}>×</button>
 
-        <div className="editor-row-2">
+        {/* Left panel: meta fields */}
+        <div className="modal-left">
           <div className="editor-field">
             <div className="editor-label">Author</div>
             <input className="editor-input" value={author} onChange={e => setAuthor(e.target.value)} />
             <div className="editor-underline" />
           </div>
+
           <div className="editor-field">
             <div className="editor-label">Year</div>
             <input className="editor-input" value={year} onChange={e => setYear(e.target.value)} />
             <div className="editor-underline" />
           </div>
-        </div>
 
-        <div className="editor-field">
-          <div className="editor-label">Source</div>
-          <input className="editor-input" value={source} onChange={e => setSource(e.target.value)} />
-          <div className="editor-underline" />
-        </div>
-
-        <div className="editor-field">
-          <div className="editor-label">Source URL</div>
-          <input className="editor-input" value={sourceUrl} onChange={e => setSourceUrl(e.target.value)} />
-          <div className="editor-underline" />
-        </div>
-
-        <div className="editor-field">
-          <div className="editor-label">Tagline</div>
-          <input className="editor-input" value={tagline} onChange={e => setTagline(e.target.value)} />
-          <div className="editor-underline" />
-        </div>
-
-        <div className="editor-field">
-          <div className="editor-label">Tags</div>
-          <TagInput tagIds={tagIds} allTags={tags} onChange={setTagIds} />
-          <div className="editor-underline" style={{ marginTop: 6 }} />
-        </div>
-
-        <div className="editor-field">
-          <div className="editor-label">Folder</div>
-          <FolderPicker folders={folders} selectedId={selectedFolderId} onChange={setSelectedFolderId} />
-        </div>
-
-        <div className="editor-pin-row">
-          <div
-            className={`editor-pin-toggle${pinned ? ' on' : ''}`}
-            onClick={() => setPinned(p => !p)}
-          />
-          <span className="editor-pin-label" onClick={() => setPinned(p => !p)}>
-            pin to top
-          </span>
-        </div>
-
-        <div className="editor-rule" />
-
-        {!showCanvas ? (
           <div className="editor-field">
-            <div className="editor-label">Text</div>
+            <div className="editor-label">Source</div>
+            <input className="editor-input" value={source} onChange={e => setSource(e.target.value)} />
+            <div className="editor-underline" />
+          </div>
+
+          <div className="editor-field">
+            <div className="editor-label">Source URL</div>
+            <input className="editor-input" value={sourceUrl} onChange={e => setSourceUrl(e.target.value)} />
+            <div className="editor-underline" />
+          </div>
+
+          <div className="editor-field">
+            <div className="editor-label">Folder</div>
+            <FolderPicker folders={folders} selectedId={selectedFolderId} onChange={setSelectedFolderId} />
+          </div>
+
+          <div className="editor-field">
+            <div className="editor-label">Tags</div>
+            <TagInput tagIds={tagIds} allTags={tags} onChange={setTagIds} />
+            <div className="editor-underline" style={{ marginTop: 6 }} />
+          </div>
+
+          <div className="editor-pin-row">
+            <div
+              className={`editor-pin-toggle${pinned ? ' on' : ''}`}
+              onClick={() => setPinned(p => !p)}
+            />
+            <span className="editor-pin-label" onClick={() => setPinned(p => !p)}>
+              pin to top
+            </span>
+          </div>
+
+          <div className="editor-footer" style={{ marginTop: 'auto', paddingTop: 'var(--s-8)' }}>
+            <button className="editor-save-btn" onClick={handleSave}>save</button>
+            <button className="editor-cancel-btn" onClick={onClose}>cancel</button>
+            {onDelete && (
+              <button className="editor-delete-btn" onClick={onDelete}>delete</button>
+            )}
+          </div>
+        </div>
+
+        {/* Right panel: tagline + paint canvas */}
+        <div className="modal-right">
+          <div className="editor-field">
+            <div className="editor-label">Tagline</div>
             <textarea
-              className="editor-input editor-textarea"
-              value={rawText}
-              onChange={e => setRawText(e.target.value)}
-              onBlur={handleTextBlur}
-              rows={7}
+              className="editor-input editor-tagline-input"
+              value={tagline}
+              onChange={e => setTagline(e.target.value)}
+              rows={3}
+              placeholder="The key line…"
             />
           </div>
-        ) : (
-          <div>
-            <div className="editor-paint-label">Cut</div>
-            <div className="editor-modes">
-              {MODES.map(m => (
-                <button key={m} className={`editor-mode-btn${paintMode === m ? ' active' : ''}`} onClick={() => setPaintMode(m)}>
-                  {MODE_LABELS[m]}
-                </button>
-              ))}
-              <span className="editor-mode-spacer" />
-              <button className="editor-mode-btn" onClick={() => setFullCanvas(true)}>expand</button>
-              <button className="editor-mode-btn" onClick={() => { setRawText(wordsToRaw(words)); setShowCanvas(false) }}>
-                edit text
-              </button>
+
+          {!showCanvas ? (
+            <div className="editor-field">
+              <div className="editor-label">Text</div>
+              <textarea
+                className="editor-input editor-textarea"
+                value={rawText}
+                onChange={e => setRawText(e.target.value)}
+                onBlur={handleTextBlur}
+                rows={8}
+              />
             </div>
-            <CanvasWords words={words} paintMode={paintMode} isDragging={isDragging} dragStart={dragStart} dragEnd={dragEnd} onWordDown={handleWordDown} onWordEnter={handleWordEnter} />
-          </div>
-        )}
+          ) : (
+            <div>
+              <div className="editor-modes">
+                {MODES.map(m => (
+                  <button
+                    key={m}
+                    className={`editor-mode-btn${paintMode === m ? ' active' : ''}`}
+                    onClick={() => setPaintMode(m)}
+                  >
+                    {MODE_LABELS[m]}
+                  </button>
+                ))}
+                <span className="editor-mode-spacer" />
+                <button className="editor-mode-btn" onClick={() => setFullCanvas(true)}>expand</button>
+                <button className="editor-mode-btn" onClick={() => { setRawText(wordsToRaw(words)); setShowCanvas(false) }}>
+                  edit text
+                </button>
+              </div>
+              <CanvasWords
+                words={words} paintMode={paintMode}
+                isDragging={isDragging} dragStart={dragStart} dragEnd={dragEnd}
+                onWordDown={handleWordDown} onWordEnter={handleWordEnter}
+              />
+            </div>
+          )}
+        </div>
 
         {fullCanvas && (
-
           <div className="canvas-fullview" onClick={() => setFullCanvas(false)}>
             <div className="canvas-fullview-inner" onClick={e => e.stopPropagation()}>
               <div className="editor-modes" style={{ marginBottom: 16 }}>
                 {MODES.map(m => (
-                  <button key={m} className={`editor-mode-btn${paintMode === m ? ' active' : ''}`} onClick={() => setPaintMode(m)}>
+                  <button
+                    key={m}
+                    className={`editor-mode-btn${paintMode === m ? ' active' : ''}`}
+                    onClick={() => setPaintMode(m)}
+                  >
                     {MODE_LABELS[m]}
                   </button>
                 ))}
                 <span className="editor-mode-spacer" />
                 <button className="editor-mode-btn" onClick={() => setFullCanvas(false)}>collapse</button>
               </div>
-              <CanvasWords words={words} paintMode={paintMode} isDragging={isDragging} dragStart={dragStart} dragEnd={dragEnd} onWordDown={handleWordDown} onWordEnter={handleWordEnter} />
+              <CanvasWords
+                words={words} paintMode={paintMode}
+                isDragging={isDragging} dragStart={dragStart} dragEnd={dragEnd}
+                onWordDown={handleWordDown} onWordEnter={handleWordEnter}
+              />
             </div>
           </div>
         )}
-
-        <div className="editor-footer">
-          <button className="editor-save-btn" onClick={handleSave}>save</button>
-          <button className="editor-cancel-btn" onClick={onClose}>cancel</button>
-          {onDelete && (
-            <button className="editor-delete-btn" onClick={onDelete}>delete</button>
-          )}
-        </div>
       </div>
     </div>
   )

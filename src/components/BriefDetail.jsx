@@ -29,7 +29,7 @@ function CardPickerOverlay({ cards, currentIds, onAdd, onClose }) {
   )
 }
 
-function BriefEditModal({ brief, onClose, onSave }) {
+function BriefEditModal({ brief, onClose, onSave, onDelete }) {
   const [name, setName] = useState(brief.name)
   const [desc, setDesc] = useState(brief.description || '')
 
@@ -71,6 +71,7 @@ function BriefEditModal({ brief, onClose, onSave }) {
         <div className="editor-footer">
           <button className="editor-save-btn" onClick={handleSave}>save</button>
           <button className="editor-cancel-btn" onClick={onClose}>cancel</button>
+          <button className="editor-delete-btn" onClick={onDelete}>delete</button>
         </div>
       </div>
     </div>
@@ -123,14 +124,14 @@ export default function BriefDetail({ brief, cards, onBack, onUpdate, onDelete, 
   return (
     <div className="briefs page">
       <div className="brief-detail">
-        <button className="brief-back" onClick={onBack}>‹ briefs</button>
-
         <div className="brief-detail-header">
-          <div className="brief-detail-name">{brief.name}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button className="brief-back" onClick={onBack}>‹</button>
+            <div className="brief-detail-name">{brief.name}</div>
+          </div>
           {isOwner && (
             <div className="brief-detail-actions">
               <button className="brief-action-btn" onClick={() => setShowEdit(true)}>edit</button>
-              <button className="brief-action-btn" onClick={onDelete}>delete</button>
             </div>
           )}
         </div>
@@ -188,6 +189,7 @@ export default function BriefDetail({ brief, cards, onBack, onUpdate, onDelete, 
           brief={brief}
           onClose={() => setShowEdit(false)}
           onSave={updates => { onUpdate(updates); setShowEdit(false) }}
+          onDelete={() => { onDelete(); setShowEdit(false) }}
         />
       )}
     </div>
