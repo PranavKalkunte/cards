@@ -7,7 +7,7 @@ async function req(method, path, body) {
   return r
 }
 
-export const loadData     = ()         => fetch('/api/data').then(r => r.json())
+export const loadData     = ()         => fetch(import.meta.env.PROD ? '/data.json' : '/api/data').then(r => r.json())
 export const authenticate = async (p)  => {
   const r = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ passphrase: p }) })
   if (!r.ok) return false

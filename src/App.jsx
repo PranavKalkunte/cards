@@ -243,7 +243,7 @@ export default function App() {
           />
         )}
 
-        {showAuth && (
+        {!import.meta.env.PROD && showAuth && (
           <AuthModal
             onAuth={handleAuth}
             onClose={() => setShowAuth(false)}
@@ -251,7 +251,7 @@ export default function App() {
         )}
 
         <Footer
-          onAuthTrigger={() => setShowAuth(true)}
+          onAuthTrigger={import.meta.env.PROD ? undefined : () => setShowAuth(true)}
           onLogout={handleLogout}
         />
       </div>

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { getAllFolders, getCardFolderId } from '../utils'
 
 function segmentsToWords(segments) {
@@ -22,10 +22,6 @@ function wordsToSegments(words) {
   return segs
 }
 
-function textToWords(text) {
-  return (text.match(/\S+\s*|\s+/g) || []).map(t => ({ text: t, type: 'context' }))
-}
-
 function mergeWords(oldWords, newText) {
   const tokens = newText.match(/\S+\s*|\s+/g) || []
   return tokens.map((token, i) => {
@@ -35,7 +31,31 @@ function mergeWords(oldWords, newText) {
   })
 }
 
-function wordsToRaw(words) { return words.map(w => w.text).join('') }
+function getCaretPos(el) {
+  const sel = window.getSelection()
+  if (!sel || !sel.rangeCount) return null
+  const range = sel.getRangeAt(0).cloneRange()
+  range.selectNodeContents(el)
+  range.setEnd(sel.getRangeAt(0).endContainer, sel.getRangeAt(0).endOffset)
+  return range.toString().length
+}
+
+function setCaretPos(el, pos) {
+  const sel = window.getSelection()
+  if (!sel) return
+  const range = document.createRange()
+  let rem = pos
+  let found = false
+  function walk(node) {
+    if (found) return
+    if (node.nodeType === 3) {
+      if (rem <= node.length) { range.setStart(node, rem); range.setEnd(node, rem); found = true }
+      else rem -= node.length
+    } else { for (const c of node.childNodes) walk(c) }
+  }
+  walk(el)
+  if (found) { sel.removeAllRanges(); sel.addRange(range) }
+}
 
 function TagInput({ tagIds, allTags, onChange }) {
   const [val, setVal] = useState('')
@@ -129,38 +149,77 @@ function FolderPicker({ folders, selectedId, onChange }) {
   )
 }
 
-const MODE_LABELS = { context: 'context', highlight: 'highlight', power: 'power' }
 const MODES = ['context', 'highlight', 'power']
 
-function CanvasWords({ words, paintMode, isDragging, dragStart, dragEnd, onWordDown, onWordEnter }) {
+function WordSpans({ words, paintMode, isDragging, dragStart, dragEnd, onWordDown, onWordEnter }) {
+  return words.map((word, i) => {
+    const lo = dragStart.current !== null ? Math.min(dragStart.current, dragEnd.current) : -1
+    const hi = dragStart.current !== null ? Math.max(dragStart.current, dragEnd.current) : -1
+    const isBrushed = isDragging.current && i >= lo && i <= hi
+    const displayType = isBrushed ? applyMode(word.type, paintMode) : word.type
+    return (
+      <span
+        key={i}
+        className={`paint-word word-${displayType}`}
+        onMouseDown={e => onWordDown(e, i)}
+        onMouseEnter={() => onWordEnter(i)}
+      >
+        {word.text}
+      </span>
+    )
+  })
+}
+
+function CanvasWords(props) {
+  return <div className="editor-canvas"><WordSpans {...props} /></div>
+}
+
+function UnifiedCanvas({ words, paintMode, isDragging, dragStart, dragEnd, onWordDown, onWordEnter, onTextChange }) {
+  const ref = useRef(null)
+  const savedCaret = useRef(null)
+
+  useLayoutEffect(() => {
+    if (savedCaret.current !== null && ref.current) {
+      if (ref.current.contains(document.activeElement) || ref.current === document.activeElement) {
+        setCaretPos(ref.current, savedCaret.current)
+      }
+      savedCaret.current = null
+    }
+  })
+
+  function handleInput(e) {
+    savedCaret.current = getCaretPos(ref.current)
+    const text = e.currentTarget.innerText.replace(/ /g, ' ')
+    onTextChange(text)
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      document.execCommand('insertLineBreak')
+    }
+  }
+
   return (
-    <div className="editor-canvas">
-      {words.map((word, i) => {
-        const lo = dragStart.current !== null ? Math.min(dragStart.current, dragEnd.current) : -1
-        const hi = dragStart.current !== null ? Math.max(dragStart.current, dragEnd.current) : -1
-        const isBrushed = isDragging.current && i >= lo && i <= hi
-        const displayType = isBrushed ? applyMode(word.type, paintMode, false) : word.type
-        return (
-          <span
-            key={i}
-            className={`paint-word word-${displayType}`}
-            onMouseDown={e => onWordDown(e, i)}
-            onMouseEnter={() => onWordEnter(i)}
-          >
-            {word.text}
-          </span>
-        )
-      })}
+    <div
+      ref={ref}
+      contentEditable
+      suppressContentEditableWarning
+      className="editor-unified-canvas"
+      onInput={handleInput}
+      onKeyDown={handleKeyDown}
+    >
+      <WordSpans words={words} paintMode={paintMode} isDragging={isDragging} dragStart={dragStart} dragEnd={dragEnd} onWordDown={onWordDown} onWordEnter={onWordEnter} />
     </div>
   )
 }
 
-function applyMode(currentType, mode, singleClick) {
+function applyMode(currentType, mode) {
   if (mode === 'context') return 'context'
   const hasU = currentType === 'highlight' || currentType === 'both'
   const hasB = currentType === 'power'     || currentType === 'both'
-  const newU = mode === 'highlight' ? (singleClick ? !hasU : true) : hasU
-  const newB = mode === 'power'     ? (singleClick ? !hasB : true) : hasB
+  const newU = mode === 'highlight' ? true : hasU
+  const newB = mode === 'power'     ? true : hasB
   if (newU && newB) return 'both'
   if (newU) return 'highlight'
   if (newB) return 'power'
@@ -180,7 +239,6 @@ export default function CardEditor({ card, folders, tags, onClose, onSave, onDel
   const [selectedFolderId, setSelectedFolderId] = useState(initialFolder)
 
   const [words,      setWords]      = useState(() => card ? segmentsToWords(card.segments) : [])
-  const [rawText,    setRawText]    = useState(() => card ? wordsToRaw(segmentsToWords(card.segments)) : '')
   const [paintMode,  setPaintMode]  = useState('highlight')
   const [fullCanvas, setFullCanvas] = useState(false)
 
@@ -199,11 +257,12 @@ export default function CardEditor({ card, folders, tags, onClose, onSave, onDel
     if (dragStart.current === null) return
     const lo = Math.min(dragStart.current, dragEnd.current)
     const hi = Math.max(dragStart.current, dragEnd.current)
-    const singleClick = lo === hi
-    setWords(prev => prev.map((w, i) => {
-      if (i < lo || i > hi) return w
-      return { ...w, type: applyMode(w.type, paintMode, singleClick) }
-    }))
+    if (isDragging.current) {
+      setWords(prev => prev.map((w, i) => {
+        if (i < lo || i > hi) return w
+        return { ...w, type: applyMode(w.type, paintMode) }
+      }))
+    }
     dragStart.current  = null
     dragEnd.current    = null
     isDragging.current = false
@@ -211,28 +270,29 @@ export default function CardEditor({ card, folders, tags, onClose, onSave, onDel
   }, [paintMode])
 
   useEffect(() => {
-    const onUp = () => { if (!isDragging.current) return; applyBrush() }
+    const onUp = () => { if (dragStart.current !== null) applyBrush() }
     window.addEventListener('mouseup', onUp)
     return () => window.removeEventListener('mouseup', onUp)
   }, [applyBrush])
 
-  function handleWordDown(e, i) {
-    e.preventDefault()
-    isDragging.current = true
+  function handleWordDown(_e, i) {
     dragStart.current  = i
     dragEnd.current    = i
+    isDragging.current = false
     tick(n => n + 1)
   }
 
   function handleWordEnter(i) {
-    if (!isDragging.current) return
+    if (dragStart.current === null) return
+    if (i !== dragStart.current && !isDragging.current) {
+      isDragging.current = true
+      window.getSelection()?.removeAllRanges()
+    }
     dragEnd.current = i
     tick(n => n + 1)
   }
 
-  function handleTextChange(e) {
-    const text = e.target.value
-    setRawText(text)
+  function handleTextChange(text) {
     setWords(prev => text.trim() ? mergeWords(prev, text) : [])
   }
 
@@ -321,36 +381,28 @@ export default function CardEditor({ card, folders, tags, onClose, onSave, onDel
 
           <div className="editor-field">
             <div className="editor-label">Text</div>
-            <textarea
-              className="editor-input editor-textarea"
-              value={rawText}
-              onChange={handleTextChange}
-              rows={5}
+            <div className="editor-modes">
+              {MODES.map(m => (
+                <button
+                  key={m}
+                  className={`editor-mode-btn${paintMode === m ? ' active' : ''}`}
+                  onClick={() => setPaintMode(m)}
+                >
+                  {m}
+                </button>
+              ))}
+              <span className="editor-mode-spacer" />
+              {words.length > 0 && (
+                <button className="editor-mode-btn" onClick={() => setFullCanvas(true)}>expand</button>
+              )}
+            </div>
+            <UnifiedCanvas
+              words={words} paintMode={paintMode}
+              isDragging={isDragging} dragStart={dragStart} dragEnd={dragEnd}
+              onWordDown={handleWordDown} onWordEnter={handleWordEnter}
+              onTextChange={handleTextChange}
             />
           </div>
-
-          {words.length > 0 && (
-            <div>
-              <div className="editor-modes">
-                {MODES.map(m => (
-                  <button
-                    key={m}
-                    className={`editor-mode-btn${paintMode === m ? ' active' : ''}`}
-                    onClick={() => setPaintMode(m)}
-                  >
-                    {MODE_LABELS[m]}
-                  </button>
-                ))}
-                <span className="editor-mode-spacer" />
-                <button className="editor-mode-btn" onClick={() => setFullCanvas(true)}>expand</button>
-              </div>
-              <CanvasWords
-                words={words} paintMode={paintMode}
-                isDragging={isDragging} dragStart={dragStart} dragEnd={dragEnd}
-                onWordDown={handleWordDown} onWordEnter={handleWordEnter}
-              />
-            </div>
-          )}
         </div>
 
         {fullCanvas && (
@@ -363,7 +415,7 @@ export default function CardEditor({ card, folders, tags, onClose, onSave, onDel
                     className={`editor-mode-btn${paintMode === m ? ' active' : ''}`}
                     onClick={() => setPaintMode(m)}
                   >
-                    {MODE_LABELS[m]}
+                    {m}
                   </button>
                 ))}
                 <span className="editor-mode-spacer" />
