@@ -90,9 +90,12 @@ export default function Files({
       <div className="files-content">
         {(selectedFolder || isUnfiled) && (
           <>
-            <button className="files-mobile-back" onClick={() => onSelectFolder(null)}>
-              ‹ folders
-            </button>
+            <div className="files-content-header">
+              <button className="files-mobile-back" onClick={() => onSelectFolder(null)}>‹</button>
+              <span className="files-folder-title">
+                {isUnfiled ? 'Inbox' : (selectedFolder?.name || '')}
+              </span>
+            </div>
             {folderCards.map(card => {
               const bold = buildBold(card.segments || [])
               return (
