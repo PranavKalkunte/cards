@@ -23,10 +23,10 @@ function buildBold(segments) {
     .map(s => ({ text: s.text }))
 }
 
-function getFolderBreadcrumb(folders, folderId) {
+function getFolderPathWithIds(folders, folderId) {
   function search(items, path) {
     for (const f of items) {
-      const p = [...path, f.name]
+      const p = [...path, { id: f.id, name: f.name }]
       if (f.id === folderId) return p
       const found = search(f.children.filter(c => typeof c === 'object'), p)
       if (found) return found
@@ -51,13 +51,12 @@ export default function Files({
     : selectedFolder
       ? selectedFolder.children.filter(c => typeof c === 'string').map(id => cards[id]).filter(Boolean)
       : []
-  const breadcrumb = isUnfiled ? ['Inbox'] : selectedFolderId ? getFolderBreadcrumb(folders, selectedFolderId) : null
+  const pathWithIds = (!isUnfiled && selectedFolderId) ? getFolderPathWithIds(folders, selectedFolderId) : null
   const inboxCount = getUnfiledCards(folders, cards).length
 
   return (
     <div className="files" data-panel={selectedFolderId ? 'content' : 'tree'}>
       <div className="files-tree">
-        {/* Inbox — special top item */}
         <div
           className={`tree-inbox-row${isUnfiled ? ' selected' : ''}`}
           onClick={() => onSelectFolder(UNFILED)}
@@ -92,9 +91,23 @@ export default function Files({
           <>
             <div className="files-content-header">
               <button className="files-mobile-back" onClick={() => onSelectFolder(null)}>‹</button>
-              <span className="files-folder-title">
-                {isUnfiled ? 'Inbox' : (selectedFolder?.name || '')}
-              </span>
+              <nav className="files-breadcrumb-nav">
+                {isUnfiled ? (
+                  <span className="files-breadcrumb-item active">Inbox</span>
+                ) : (
+                  pathWithIds?.map((seg, i, arr) => (
+                    <span key={seg.id} className="files-breadcrumb-segment">
+                      {i > 0 && <span className="files-breadcrumb-sep">/</span>}
+                      <span
+                        className={`files-breadcrumb-item${i === arr.length - 1 ? ' active' : ''}`}
+                        onClick={() => i < arr.length - 1 ? onSelectFolder(seg.id) : undefined}
+                      >
+                        {seg.name}
+                      </span>
+                    </span>
+                  ))
+                )}
+              </nav>
             </div>
             {folderCards.map(card => {
               const bold = buildBold(card.segments || [])
