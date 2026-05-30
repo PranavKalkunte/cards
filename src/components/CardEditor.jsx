@@ -182,13 +182,25 @@ function UnifiedCanvas({ words, paintMode, isDragging, dragStart, dragEnd, onWor
   const ref = useRef(null)
   const savedCaret = useRef(null)
 
+  // Build HTML string for dangerouslySetInnerHTML so React owns innerHTML
+  // directly, preventing conflicts between React reconciliation and the
+  // browser's contentEditable DOM management during rapid deletions.
+  const html = words.map((word, i) => {
+    const lo = dragStart.current !== null ? Math.min(dragStart.current, dragEnd.current) : -1
+    const hi = dragStart.current !== null ? Math.max(dragStart.current, dragEnd.current) : -1
+    const isBrushed = isDragging.current && i >= lo && i <= hi
+    const displayType = isBrushed ? applyMode(word.type, paintMode) : word.type
+    const escaped = word.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    return '<span class="paint-word word-' + displayType + '">' + escaped + '</span>'
+  }).join('')
+
   useLayoutEffect(() => {
     if (!ref.current) return
-    // Remove browser-inserted nodes React doesn't track: phantom <br>, stray
-    // text nodes, and empty spans Chrome leaves behind after full deletion.
-    for (const node of [...ref.current.childNodes]) {
-      if (node.nodeName !== 'SPAN' || !node.textContent) ref.current.removeChild(node)
-    }
+    // Attach mouse handlers imperatively after each innerHTML update
+    Array.from(ref.current.children).forEach((span, i) => {
+      span.onmousedown = e => onWordDown(e, i)
+      span.onmouseenter = () => onWordEnter(i)
+    })
     if (savedCaret.current !== null) {
       if (ref.current.contains(document.activeElement) || ref.current === document.activeElement) {
         setCaretPos(ref.current, savedCaret.current)
@@ -199,7 +211,9 @@ function UnifiedCanvas({ words, paintMode, isDragging, dragStart, dragEnd, onWor
 
   function handleInput(e) {
     savedCaret.current = getCaretPos(ref.current)
-    const text = e.currentTarget.innerText.replace(/ /g, ' ')
+    const text = e.currentTarget.innerText
+      .replace(/ /g, ' ')
+      .replace(/\n$/, '')
     onTextChange(text)
   }
 
@@ -218,11 +232,11 @@ function UnifiedCanvas({ words, paintMode, isDragging, dragStart, dragEnd, onWor
       className="editor-unified-canvas"
       onInput={handleInput}
       onKeyDown={handleKeyDown}
-    >
-      <WordSpans words={words} paintMode={paintMode} isDragging={isDragging} dragStart={dragStart} dragEnd={dragEnd} onWordDown={onWordDown} onWordEnter={onWordEnter} />
-    </div>
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   )
 }
+
 
 function applyMode(currentType, mode) {
   if (mode === 'context') return 'context'
