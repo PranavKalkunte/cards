@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import BriefDetail from './BriefDetail'
+import TiltCard from './TiltCard'
 import { useOwner } from '../OwnerContext'
 
 function BriefEditorModal({ onClose, onSave }) {
@@ -84,27 +85,44 @@ export default function Briefs({
 
   return (
     <div className="briefs page">
-      <div className="briefs-grid">
+      <div style={{
+        display: "flex",
+        flexWrap: "wrap",
+        gap: 24,
+        justifyContent: "center",
+        alignItems: "flex-start",
+        padding: "48px 32px",
+        minHeight: "60vh",
+      }}>
         {briefList.map((brief, i) => (
-          <div
+          <TiltCard
             key={brief.id}
-            className="brief-sq"
-            style={{ animationDelay: `${i * 0.06}s` }}
+            brief={brief}
+            index={i}
             onClick={() => onSelectBrief(brief.id)}
-          >
-            <div className="brief-sq-top">
-              <span className="brief-sq-count">{brief.cardIds.length}</span>
-            </div>
-            <div className="brief-sq-bottom">
-              <div className="brief-sq-name">{brief.name}</div>
-              {brief.description && (
-                <div className="brief-sq-desc">{brief.description}</div>
-              )}
-            </div>
-          </div>
+          />
         ))}
         {isOwner && (
-          <div className="brief-sq-new" onClick={() => setShowNewBrief(true)}>+</div>
+          <div
+            onClick={() => setShowNewBrief(true)}
+            style={{
+              width: 280,
+              height: 210,
+              borderRadius: 16,
+              border: "2px dashed var(--rule)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              color: "var(--faint)",
+              fontSize: 32,
+              fontWeight: 300,
+              transition: "border-color 0.15s, color 0.15s",
+              flexShrink: 0,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--accent-line)"; e.currentTarget.style.color = "var(--accent)" }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--rule)"; e.currentTarget.style.color = "var(--faint)" }}
+          >+</div>
         )}
       </div>
 

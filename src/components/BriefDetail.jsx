@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useOwner } from '../OwnerContext'
+import CardStack from './CardStack'
 
 function CardPickerOverlay({ cards, currentIds, onAdd, onClose }) {
   const all = Object.values(cards)
@@ -79,39 +80,13 @@ function BriefEditModal({ brief, onClose, onSave, onDelete }) {
 }
 
 export default function BriefDetail({ brief, cards, onBack, onUpdate, onDelete, onCardClick }) {
-  const [dragIdx, setDragIdx] = useState(null)
-  const [overIdx, setOverIdx] = useState(null)
   const [showPicker, setShowPicker] = useState(false)
   const [showEdit,   setShowEdit]   = useState(false)
+  const [dragIdx,    setDragIdx]    = useState(null)
+  const [overIdx,    setOverIdx]    = useState(null)
   const isOwner = useOwner()
 
   const cardList = brief.cardIds.map(id => cards[id]).filter(Boolean)
-
-  function handleDragStart(e, i) {
-    setDragIdx(i)
-    e.dataTransfer.effectAllowed = 'move'
-  }
-
-  function handleDragOver(e, i) {
-    e.preventDefault()
-    if (i !== overIdx) setOverIdx(i)
-  }
-
-  function handleDrop(e, i) {
-    e.preventDefault()
-    if (dragIdx === null || dragIdx === i) { setDragIdx(null); setOverIdx(null); return }
-    const ids = [...brief.cardIds]
-    const [moved] = ids.splice(dragIdx, 1)
-    ids.splice(i, 0, moved)
-    onUpdate({ cardIds: ids })
-    setDragIdx(null)
-    setOverIdx(null)
-  }
-
-  function handleDragEnd() {
-    setDragIdx(null)
-    setOverIdx(null)
-  }
 
   function removeCard(id) {
     onUpdate({ cardIds: brief.cardIds.filter(c => c !== id) })
@@ -120,6 +95,19 @@ export default function BriefDetail({ brief, cards, onBack, onUpdate, onDelete, 
   function addCard(id) {
     onUpdate({ cardIds: [...brief.cardIds, id] })
   }
+
+  function handleDragStart(e, i) { setDragIdx(i); e.dataTransfer.effectAllowed = 'move' }
+  function handleDragOver(e, i)  { e.preventDefault(); if (i !== overIdx) setOverIdx(i) }
+  function handleDrop(e, i) {
+    e.preventDefault()
+    if (dragIdx === null || dragIdx === i) { setDragIdx(null); setOverIdx(null); return }
+    const ids = [...brief.cardIds]
+    const [moved] = ids.splice(dragIdx, 1)
+    ids.splice(i, 0, moved)
+    onUpdate({ cardIds: ids })
+    setDragIdx(null); setOverIdx(null)
+  }
+  function handleDragEnd() { setDragIdx(null); setOverIdx(null) }
 
   return (
     <div className="briefs page">
@@ -142,33 +130,98 @@ export default function BriefDetail({ brief, cards, onBack, onUpdate, onDelete, 
 
         <div className="brief-rule" />
 
-        {cardList.map((card, i) => (
-          <div
-            key={card.id}
-            className={`brief-card-item${isOwner && overIdx === i && dragIdx !== i ? ' drag-over' : ''}`}
-            draggable={isOwner}
-            onDragStart={isOwner ? e => handleDragStart(e, i) : undefined}
-            onDragOver={isOwner ? e => handleDragOver(e, i) : undefined}
-            onDrop={isOwner ? e => handleDrop(e, i) : undefined}
-            onDragEnd={isOwner ? handleDragEnd : undefined}
-          >
-            {isOwner && <span className="brief-card-handle" title="drag to reorder">⠿</span>}
-            <div className="brief-card-body" onClick={() => onCardClick(card.id)}>
-              <div className="brief-card-tagline">{card.tagline}</div>
-              <div className="brief-card-meta">{card.author}&ensp;{card.year}</div>
+        <CardStack
+          items={cardList}
+          ratio="3 / 2"
+          borderRadius={6}
+          offset={8}
+          scaleStep={0.05}
+          dimStep={0.12}
+          style={{ width: '100%' }}
+          onFrontClick={card => onCardClick(card.id)}
+          renderCard={(card, _index, isFront) => (
+            <div style={{
+              width: '100%',
+              height: '100%',
+              background: 'var(--lift)',
+              boxSizing: 'border-box',
+              padding: '28px 32px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              textAlign: 'center',
+              userSelect: 'none',
+            }}>
+              <div style={{
+                fontFamily: 'var(--serif)',
+                fontSize: '20px',
+                lineHeight: 1.35,
+                color: 'var(--ink)',
+                marginBottom: '10px',
+              }}>{card.tagline}</div>
+              <div style={{
+                width: 32,
+                height: 2,
+                background: 'var(--accent)',
+                borderRadius: 1,
+                marginBottom: 10,
+              }} />
+              <div style={{
+                fontFamily: 'var(--mono)',
+                fontSize: '9px',
+                color: 'var(--faint)',
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+              }}>{[card.author, card.year].filter(Boolean).join(' · ')}</div>
+              {isFront && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: 14,
+                  right: 16,
+                  fontFamily: 'var(--mono)',
+                  fontSize: '9px',
+                  color: 'var(--faint)',
+                }}>drag to cycle</div>
+              )}
             </div>
-            {isOwner && (
-              <button
-                className="brief-card-remove"
-                onClick={e => { e.stopPropagation(); removeCard(card.id) }}
-              >
-                ×
-              </button>
-            )}
-          </div>
-        ))}
+          )}
+        />
 
-        {isOwner && (
+        {isOwner && cardList.length > 0 && (
+          <div style={{ marginTop: 24 }}>
+            {brief.cardIds.map((id, i) => {
+              const card = cards[id]
+              if (!card) return null
+              return (
+                <div
+                  key={id}
+                  className={`brief-card-item${overIdx === i && dragIdx !== i ? ' drag-over' : ''}`}
+                  draggable
+                  onDragStart={e => handleDragStart(e, i)}
+                  onDragOver={e => handleDragOver(e, i)}
+                  onDrop={e => handleDrop(e, i)}
+                  onDragEnd={handleDragEnd}
+                >
+                  <span className="brief-card-handle">⠿</span>
+                  <div className="brief-card-body" onClick={() => onCardClick(id)}>
+                    <div className="brief-card-tagline">{card.tagline}</div>
+                    <div className="brief-card-meta">{card.author}&ensp;{card.year}</div>
+                  </div>
+                  <button
+                    className="brief-card-remove"
+                    onClick={e => { e.stopPropagation(); removeCard(id) }}
+                  >×</button>
+                </div>
+              )
+            })}
+            <button className="brief-add-card" onClick={() => setShowPicker(true)}>
+              + add card
+            </button>
+          </div>
+        )}
+
+        {isOwner && cardList.length === 0 && (
           <button className="brief-add-card" onClick={() => setShowPicker(true)}>
             + add card
           </button>

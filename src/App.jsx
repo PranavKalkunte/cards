@@ -8,6 +8,7 @@ import CardEditor from './components/CardEditor'
 import AuthModal from './components/AuthModal'
 import Footer from './components/Footer'
 import { OwnerContext } from './OwnerContext'
+import InteractiveDots from './components/InteractiveDots'
 import * as api from './api'
 import {
   removeCardFromTree,
@@ -175,7 +176,17 @@ export default function App() {
 
   return (
     <OwnerContext.Provider value={isOwner}>
-      <div>
+      <div style={{ position: 'relative' }}>
+        <InteractiveDots
+          gridType="dots"
+          dotColor={dark ? "#9CA3AF" : "#44445A"}
+          dotSize={3}
+          spacing={48}
+          proximityRadius={120}
+          maxOpacity={dark ? 0.8 : 0.6}
+          backgroundOpacity={dark ? 0.12 : 0.08}
+        />
+        <div style={{ position: 'relative', zIndex: 1 }}>
         <Navigation
           activeTab={activeTab}
           onTabChange={handleTabChange}
@@ -256,6 +267,7 @@ export default function App() {
           onAuthTrigger={import.meta.env.PROD ? undefined : () => setShowAuth(true)}
           onLogout={handleLogout}
         />
+        </div>
       </div>
     </OwnerContext.Provider>
   )

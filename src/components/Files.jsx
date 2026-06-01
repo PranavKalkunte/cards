@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import FolderTree from './FolderTree'
 import { getFolderById } from '../utils'
-import { useOwner } from '../OwnerContext'
+
 
 const UNFILED = '__unfiled__'
 
@@ -42,38 +42,48 @@ export default function Files({
   onCardClick, onAddFolder,
   onRenameFolder, onDeleteFolder, onMoveCard,
 }) {
-  const [createTrigger, setCreateTrigger] = useState(null)
-  const isOwner = useOwner()
-  const isUnfiled = selectedFolderId === UNFILED
-  const selectedFolder = (!isUnfiled && selectedFolderId) ? getFolderById(folders, selectedFolderId) : null
-  const folderCards = isUnfiled
+  const [hoveredId, setHoveredId] = useState(null)
+  // Right panel shows hovered folder as preview, falls back to selected
+  const displayId     = hoveredId || selectedFolderId
+  const isDisplayUnfiled = displayId === UNFILED
+  const displayFolder = (!isDisplayUnfiled && displayId) ? getFolderById(folders, displayId) : null
+  const displayCards  = isDisplayUnfiled
     ? getUnfiledCards(folders, cards)
-    : selectedFolder
-      ? selectedFolder.children.filter(c => typeof c === 'string').map(id => cards[id]).filter(Boolean)
+    : displayFolder
+      ? displayFolder.children.filter(c => typeof c === 'string').map(id => cards[id]).filter(Boolean)
       : []
-  const pathWithIds = (!isUnfiled && selectedFolderId) ? getFolderPathWithIds(folders, selectedFolderId) : null
+
   const inboxCount = getUnfiledCards(folders, cards).length
+
+  const inboxOpacity = hoveredId === UNFILED ? 1
+    : selectedFolderId === UNFILED ? 1
+    : hoveredId ? 0.2
+    : selectedFolderId ? 0.5
+    : 0.65
 
   return (
     <div className="files" data-panel={selectedFolderId ? 'content' : 'tree'}>
       <div className="files-tree">
         <div
-          className={`tree-inbox-row${isUnfiled ? ' selected' : ''}`}
+          className="gallery-tree-row"
+          style={{ paddingLeft: 20, opacity: inboxOpacity, transition: 'opacity 0.18s ease', marginBottom: 4 }}
           onClick={() => onSelectFolder(UNFILED)}
+          onMouseEnter={() => setHoveredId(UNFILED)}
         >
-          <span className="tree-inbox-name">Inbox</span>
-          {inboxCount > 0 && <span className="tree-inbox-count">{inboxCount}</span>}
-          {isOwner && (
-            <button
-              className="tree-inbox-add"
-              onClick={e => {
-                e.stopPropagation()
-                const folderId = (selectedFolderId && selectedFolderId !== UNFILED) ? selectedFolderId : null
-                setCreateTrigger({ folderId, ts: Date.now() })
-              }}
-            >+</button>
-          )}
+          <span
+            className="gallery-tree-name"
+            style={{
+              fontSize: 28,
+              fontFamily: 'var(--display)',
+              fontWeight: 400,
+              color: selectedFolderId === UNFILED ? 'var(--accent)' : 'var(--ink)',
+              letterSpacing: '-0.02em',
+              transition: 'color 0.15s ease',
+            }}
+          >Inbox</span>
+          {inboxCount > 0 && <span className="gallery-tree-count">{inboxCount}</span>}
         </div>
+
         <FolderTree
           folders={folders}
           selectedId={selectedFolderId}
@@ -82,20 +92,21 @@ export default function Files({
           onRenameFolder={onRenameFolder}
           onDeleteFolder={onDeleteFolder}
           onMoveCard={onMoveCard}
-          triggerCreate={createTrigger}
+          hoveredId={hoveredId}
+          onHover={setHoveredId}
         />
       </div>
 
       <div className="files-content">
-        {(selectedFolder || isUnfiled) && (
-          <>
+        {displayId ? (
+          <div key={displayId} style={{ animation: 'folderFadeIn 0.18s ease' }}>
             <div className="files-content-header">
               <button className="files-mobile-back" onClick={() => onSelectFolder(null)}>‹</button>
               <nav className="files-breadcrumb-nav">
-                {isUnfiled ? (
+                {isDisplayUnfiled ? (
                   <span className="files-breadcrumb-item active">Inbox</span>
-                ) : (
-                  pathWithIds?.map((seg, i, arr) => (
+                ) : displayFolder ? (
+                  (getFolderPathWithIds(folders, displayId) || []).map((seg, i, arr) => (
                     <span key={seg.id} className="files-breadcrumb-segment">
                       {i > 0 && <span className="files-breadcrumb-sep">/</span>}
                       <span
@@ -106,10 +117,10 @@ export default function Files({
                       </span>
                     </span>
                   ))
-                )}
+                ) : null}
               </nav>
             </div>
-            {folderCards.map(card => {
+            {displayCards.map(card => {
               const bold = buildBold(card.segments || [])
               return (
                 <div
@@ -129,8 +140,8 @@ export default function Files({
                 </div>
               )
             })}
-          </>
-        )}
+          </div>
+        ) : null}
       </div>
     </div>
   )
