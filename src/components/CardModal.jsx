@@ -37,7 +37,7 @@ export default function CardModal({ card, folders, tags, onClose, onEdit, onNavi
 
           <div className="modal-author">
             {card.author}
-            {card.pinned && <span style={{ color: 'var(--accent)', fontSize: 10 }}>●</span>}
+            {card.pinned && <span className="modal-pin-dot">●</span>}
           </div>
 
           {card.year && <div className="modal-year">{card.year}</div>}

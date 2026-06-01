@@ -11,7 +11,6 @@ function buildCondensed(segments) {
 
 export default function CutCard({ card, index, onClick }) {
   const condensed = buildCondensed(card.segments)
-  const source = [card.author, card.year].filter(Boolean).join(' · ')
 
   return (
     <article
@@ -21,7 +20,11 @@ export default function CutCard({ card, index, onClick }) {
     >
       <div className="cut-ordinal">{String(index + 1).padStart(2, '0')}</div>
       <div className="cut-meta">
-        <span className="cut-meta-source">{source}</span>
+        <span className="cut-meta-source">
+          {card.author && <span className="cut-meta-author">{card.author}</span>}
+          {card.author && card.year && <span className="cut-meta-sep"> · </span>}
+          {card.year && <span className="cut-meta-year">{card.year}</span>}
+        </span>
         {card.createdAt && (
           <span className="cut-meta-date">{formatDate(card.createdAt)}</span>
         )}
